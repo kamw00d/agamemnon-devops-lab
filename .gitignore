@@ -1,0 +1,16 @@
+# Hyper-V virtual machine artifacts
+/Exports/
+/ISO/
+/VHDX/
+/VMs/
+
+ # Local editor configuration
+/.vscode/
+
+ # Environment variables and secrets
+.env
+.env.*
+
+# Logs and temporary files
+*.log
+*.tmp
