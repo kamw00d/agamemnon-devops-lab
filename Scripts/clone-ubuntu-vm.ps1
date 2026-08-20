@@ -1,18 +1,27 @@
 ﻿#Requires -RunAsAdministrator
 
-$ErrorActionPreference = "Stop"
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$NewVMName,
 
-$SourceExportPath = "C:\Hyper-V-Lab\Exports\ubuntu-template-01"
-$NewVMName = "cicd-01"
-$SwitchName = "KAMIL-LAB"
+    [Parameter()]
+    [ValidateNotNullOrEmpty()]
+    [string]$SourceExportPath = "C:\Hyper-V-Lab\Exports\ubuntu-template-01",
+
+    [Parameter()]
+    [ValidateNotNullOrEmpty()]
+    [string]$SwitchName = "KAMIL-LAB"
+)
+
+$ErrorActionPreference = "Stop"
 
 $VMRoot = "C:\Hyper-V-Lab\VMs"
 $VhdRoot = "C:\Hyper-V-Lab\VHDX"
 
-
 $NewVMPath = "$VMRoot\$NewVMName"
 $NewVhdPath = "$VhdRoot\$NewVMName.vhdx"
-
 
 $SourceVhdx = Get-ChildItem `
     -LiteralPath $SourceExportPath `
