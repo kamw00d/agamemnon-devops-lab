@@ -122,30 +122,6 @@ $NewVM = New-VM @VMParameters
 
 Write-Host "Maszyna wirtualna '$NewVMName' została utworzona pomyślnie."
 
-
-Write-Host
-Write-Host "Aktualna konfiguracja maszyny '$NewVMName':"
-
-Get-VM -Name $NewVMName | Format-List `
-    Name,
-    State,
-    Generation,
-    ProcessorCount,
-    MemoryStartup
-
-Get-VMHardDiskDrive -VMName $NewVMName | Format-List `
-    Path,
-    ControllerType,
-    ControllerNumber,
-    ControllerLocation
-
-Get-VMNetworkAdapter -VMName $NewVMName | Format-List `
-    Name,
-    SwitchName,
-    Status,
-    MacAddress,
-    DynamicMacAddressEnabled
-
 if ($NewVM.State -ne "Off") {
     throw "Maszyna '$NewVMName' musi być wyłaczona przed konfiguracją sprzętu."
 }
@@ -169,4 +145,24 @@ Set-VM `
 Write-Host "Procesor, pamięc i checkpointy zostały skonfigurwane."
 
 Write-Host
-Write-Host
+Write-Host "Aktualna konfiguracja maszyny '$NewVMName':"
+
+Get-VM -Name $NewVMName | Format-List `
+    Name,
+    State,
+    Generation,
+    ProcessorCount,
+    MemoryStartup
+
+Get-VMHardDiskDrive -VMName $NewVMName | Format-List `
+    Path,
+    ControllerType,
+    ControllerNumber,
+    ControllerLocation
+
+Get-VMNetworkAdapter -VMName $NewVMName | Format-List `
+    Name,
+    SwitchName,
+    Status,
+    MacAddress,
+    DynamicMacAddressEnabled
