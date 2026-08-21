@@ -1,18 +1,27 @@
 ﻿#Requires -RunAsAdministrator
 
-$ErrorActionPreference = "Stop"
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$NewVMName,
 
-$SourceExportPath = "C:\Hyper-V-Lab\Exports\ubuntu-template-01"
-$NewVMName = "cicd-01"
-$SwitchName = "KAMIL-LAB"
+    [Parameter()]
+    [ValidateNotNullOrEmpty()]
+    [string]$SourceExportPath = "C:\Hyper-V-Lab\Exports\ubuntu-template-01",
+
+    [Parameter()]
+    [ValidateNotNullOrEmpty()]
+    [string]$SwitchName = "KAMIL-LAB"
+)
+
+$ErrorActionPreference = "Stop"
 
 $VMRoot = "C:\Hyper-V-Lab\VMs"
 $VhdRoot = "C:\Hyper-V-Lab\VHDX"
 
-
 $NewVMPath = "$VMRoot\$NewVMName"
 $NewVhdPath = "$VhdRoot\$NewVMName.vhdx"
-
 
 $SourceVhdx = Get-ChildItem `
     -LiteralPath $SourceExportPath `
@@ -26,11 +35,30 @@ if (-not $SourceVhdx) {
     throw "Nie znaleziono dysku VHDX w eksporcie: $SourceExportPath"
 }
 
+Write-Host
+Write-Host "Sprawdzanie przełącznika wirtualnego '$SwitchName'..."
+
+$VirtualSwitch = Get-VMSwitch `
+    -Name $SwitchName `
+    -ErrorAction SilentlyContinue
+
+if (-not $VirtualSwitch) {
+    throw "Nie znaleziono przełącznika wirtualnego o nazwie '$SwitchName'."
+}
+
+Write-Host "Przełącznik wirtualny '$SwitchName' został znaleziony."
+
 $ExistingVM = Get-VM `
     -Name $NewVMName `
     -ErrorAction SilentlyContinue
 
+if ($ExistingVM) {
+    throw "Maszyna wirtualna o nazwie '$NewVMName' już istnieje. Przerywam, aby uniknąć nadpisania istniejącej maszyny."
+}
 
+if (Test-Path -LiteralPath $NewVhdPath) {
+    throw "Dysk docelowy '$NewVhdPath' już istnieje. Przerywam, aby uniknąć nadpisania istniejącego dysku."
+}
 
 Write-Host "Źrodłowy dysk:"
 Write-Host $SourceVhdx.FullName
@@ -55,22 +83,14 @@ New-Item `
     -Path $VMRoot `
     -Force | Out-Null
 
-if (Test-Path $NewVhdPath) {
-    Write-Host "Dysk docelowy już istnieje. Pomijam ponowne kopiowanie."
+Write-Host "Kopiowanie dysku źródłowego do: $NewVhdPath"
 
-    $CopiedVhdx = Get-Item -LiteralPath $NewVhdPath
-}
-else {
-    Write-Host "Kopiowanie dysku źródłowego do: $NewVhdPath"
+Copy-Item `
+    -LiteralPath $SourceVhdx.FullName `
+    -Destination $NewVhdPath `
 
-    Copy-Item `
-        -LiteralPath $SourceVhdx.FullName `
-        -Destination $NewVhdPath `
-        -Force
-
-    $CopiedVhdx = Get-Item `
-        -LiteralPath $NewVhdPath
-}
+$CopiedVhdx = Get-Item `
+    -LiteralPath $NewVhdPath
 
 if ($CopiedVhdx.Length -ne $SourceVhdx.Length) {
     throw "Rozmiar skopiowanego dysku różni się od rozmiaru źródła."
@@ -80,19 +100,6 @@ Write-Host "Dysk maszyny '$NewVMName' został skopiowany pomyślnie."
 Write-Host "Źródło: $($SourceVhdx.FullName)"
 Write-Host "Kopia: $($CopiedVhdx.FullName)"
 Write-Host "Rozmiar: $([math]::Round($CopiedVhdx.Length / 1GB, 2)) GB"
-
-Write-Host
-Write-Host "Sprawdzanie przełącznikua wirtualnego '$SwitchName'..."
-
-$VirtualSwitch = Get-VMSwitch `
-    -Name $SwitchName `
-    -ErrorAction SilentlyContinue
-
-if (-not $VirtualSwitch) {
-    throw "Nie znaleziono przełącznika wirtualnego o nazwie '$SwitchName'."
-}
-
-Write-Host "Przełącznik wirtualny '$SwitchName' został znaleziony."
 
 $VMParameters = [ordered]@{
     Name = $NewVMName
@@ -108,45 +115,12 @@ Write-Host "Parametry maszyny przekazywane do New-VM:"
 
 $VMParameters.GetEnumerator() | Format-Table Key, Value -AutoSize
 
-if ($ExistingVM) {
-    Write-Host
-    Write-Host "Maszyna wirtualna '$NewVMName' już istnieje. Pomijam tworzenie nowej maszyny."
-
-    $NewVM = $ExistingVM
-}
-
-else {
-    Write-Host
-    Write-Host "Tworzenie maszyny wirtualnej '$NewVMName'..."
-
-    $NewVM = New-VM @VMParameters
-
-    Write-Host "Maszyna wirtualna '$NewVMName' została utworzona pomyślnie."
-}
-
-
 Write-Host
-Write-Host "Aktualna konfiguracja maszyny '$NewVMName':"
+Write-Host "Tworzenie maszyny wirtualnej '$NewVMName'..."
 
-Get-VM -Name $NewVMName | Format-List `
-    Name,
-    State,
-    Generation,
-    ProcessorCount,
-    MemoryStartup
+$NewVM = New-VM @VMParameters
 
-Get-VMHardDiskDrive -VMName $NewVMName | Format-List `
-    Path,
-    ControllerType,
-    ControllerNumber,
-    ControllerLocation
-
-Get-VMNetworkAdapter -VMName $NewVMName | Format-List `
-    Name,
-    SwitchName,
-    Status,
-    MacAddress,
-    DynamicMacAddressEnabled
+Write-Host "Maszyna wirtualna '$NewVMName' została utworzona pomyślnie."
 
 if ($NewVM.State -ne "Off") {
     throw "Maszyna '$NewVMName' musi być wyłaczona przed konfiguracją sprzętu."
@@ -171,4 +145,24 @@ Set-VM `
 Write-Host "Procesor, pamięc i checkpointy zostały skonfigurwane."
 
 Write-Host
-Write-Host
+Write-Host "Aktualna konfiguracja maszyny '$NewVMName':"
+
+Get-VM -Name $NewVMName | Format-List `
+    Name,
+    State,
+    Generation,
+    ProcessorCount,
+    MemoryStartup
+
+Get-VMHardDiskDrive -VMName $NewVMName | Format-List `
+    Path,
+    ControllerType,
+    ControllerNumber,
+    ControllerLocation
+
+Get-VMNetworkAdapter -VMName $NewVMName | Format-List `
+    Name,
+    SwitchName,
+    Status,
+    MacAddress,
+    DynamicMacAddressEnabled

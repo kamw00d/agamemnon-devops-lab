@@ -49,7 +49,7 @@ Cloned lab virtual machine
 - Ubuntu Server installation image
 - an existing Hyper-V virtual switch
 
-Configuration values such as VM names, paths, memory allocation, and virtual switch names are currently defined at the beginning of each script.
+The clone workflow accepts a mandatory VM name and optional source export path and virtual switch parameters. Other scripts still define their configuration values near the beginning of each file.
 
 ## Script workflow
 
@@ -57,6 +57,27 @@ Configuration values such as VM names, paths, memory allocation, and virtual swi
 2. Install and prepare Ubuntu Server inside the virtual machine.
 3. Shut down the template and run `export-ubuntu-template.ps1`.
 4. Run `clone-ubuntu-vm.ps1` to create a new lab VM from the exported disk.
+
+## Cloning a lab virtual machine
+
+Run the script from the repository root in an elevated Windows PowerShell session:
+
+```powershell
+.\Scripts\clone-ubuntu-vm.ps1 -NewVMName "payment-api-01"
+```
+
+By default, the script uses the `ubuntu-template-01` export and connects the new virtual machine to the `KAMIL-LAB` virtual switch.
+
+The source export path and virtual switch can also be specified explicitly:
+
+```powershell
+.\Scripts\clone-ubuntu-vm.ps1 `
+    -NewVMName "fraud-detection-01" `
+    -SourceExportPath "C:\Hyper-V-Lab\Exports\ubuntu-template-01" `
+    -SwitchName "KAMIL-LAB"
+```
+
+Before making changes, the script validates the source VHDX and virtual switch. It stops if the destination VM or VHDX already exists.
 
 ## Repository safety
 
@@ -66,7 +87,7 @@ No credentials or production configuration should be committed to this repositor
 
 ## Roadmap
 
-- parameterize the existing PowerShell scripts;
+- parameterize the remaining PowerShell scripts;
 - add post-clone system configuration;
 - provision dedicated CI/CD and application hosts;
 - introduce Docker-based application deployment;
