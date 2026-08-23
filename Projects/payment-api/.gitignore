@@ -2,4 +2,4 @@
 *.swo
 __pycache__/
 *.pyc
-
+test-app.log
